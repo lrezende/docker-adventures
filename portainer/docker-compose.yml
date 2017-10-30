@@ -1,0 +1,77 @@
+version: "3.2"
+
+networks:
+  portainer-net:
+    attachable: true
+
+services:
+  portainer:
+    image: portainer/portainer:latest
+    networks:
+      - portainer-net
+    ports:
+      - 9000:9000
+    volumes:
+#      - ./certs:/certs
+#      - /data/docker/portainer:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: [
+        "--admin-password-file", "/run/secrets/portainer_password",
+#        "--ssl", "--sslcert", "/certs/portainer.crt", "--sslkey", "/certs/portainer.key"
+    ]
+    secrets:
+      - source: "portainer_password.v1"
+        target: "portainer_password"
+        uid: "33"
+        gid: "33"
+        mode: 0400
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 30M
+        reservations:
+          cpus: '0.10'
+          memory: 25M
+
+  portainer-endpoint:
+    image: softonic/portainer-endpoint:0.2.0
+    networks:
+      - portainer-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/hostname:/etc/host_hostname
+    environment:
+#      PORTAINER_ADDR: "https://portainer:9000"
+      PORTAINER_ADDR: "http://portainer:9000"
+      PORTAINER_USER: "admin"
+      PORTAINER_PASS: "--DOCKER-SECRET:portainer_password--"
+      SSL_IGNORE_CERTIFICATION_CHECK: "true"
+    secrets:
+      - source: "portainer_password.v1"
+        target: "portainer_password"
+        uid: "33"
+        gid: "33"
+        mode: 0400
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 20M
+        reservations:
+          cpus: '0.05'
+          memory: 10M
+
+secrets:
+  portainer_password.v1:
+    external: true
+

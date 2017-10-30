@@ -1,2 +1,2 @@
 # docker-adventures
-Intended to be use with http://play-with-docker.com
+Intended to be used with http://play-with-docker.com
